@@ -5,7 +5,8 @@ Steps (each must succeed before the next):
      (a vision statement replaces every parsed table of its kind in that report).
   2. copy the published db to <db>.staged and run load_facts.py on it (rebuilds all statement facts).
   3. audit staged vs published: status counts, reports that left EXTRACTED, reports that became empty, integrity,
-     foreign keys, period-length changes, total-assets unit outliers (x300 off the company's median), and a natural-key
+     foreign keys, period-length changes, total-assets unit outliers (x300 off the company's median), column scale
+     outliers (any line, x300), interim periods that fit no financial year, 10x conflicts between reports, and a natural-key
      fact diff: (document, label, end date, months, scope) -> value. Facts lost or changed in reports WITHOUT a vision
      file are the alarm: a checker or loader change has touched data nobody re-read.
   4. --publish: back up the published db, swap in the staged db and the new source dir.
@@ -59,6 +60,69 @@ def outliers(s, db):
     return out
 
 
+PER_SHARE = ("per share", "per ordinary share", "per voting share", "earnings per", "eps", "per unit", "net asset value per")
+
+
+def scale_outliers(s, db):
+    """Statement columns (document, statement, period, scope, currency) whose lines sit >= 300x from the same lines in
+    the company's other reports (amounts per month for periods). Arithmetic checks pass at any scale, so this is the
+    only guard against a wrong stated unit in an income statement or cash flow (Rs.'000 printed over rupees)."""
+    level, cols = collections.defaultdict(list), collections.defaultdict(list)
+    for c, d, st, pid, sc, cur, lid, v, m, raw in s.execute(f"""select f.company_id, f.document_id, rl.statement_type_id,
+            f.period_id, f.entity_scope, f.currency, f.label_id, abs(f.value), pp.months, lower(rl.raw_label)
+            from {db}.financial_fact f join {db}.reported_label rl using(label_id) join {db}.reporting_period pp using(period_id)
+            where f.value<>0 and rl.statement_type_id in (1,2,3,4)"""):
+        if any(w in raw for w in PER_SHARE):
+            continue
+        x = v / (m or 1)
+        level[(c, sc, cur, m is None, lid)].append((d, x))
+        cols[(c, d, st, pid, sc, cur)].append(((c, sc, cur, m is None, lid), x))
+    out = set()
+    for (c, d, *_), lines in cols.items():
+        rs = []
+        for k, x in lines:
+            others = [y for dd, y in level[k] if dd != d]
+            if len(others) >= 3:
+                rs.append(x / statistics.median(others))
+        if len(rs) >= 3 and not (1 / 300 < statistics.median(rs) < 300):
+            out.add(d)
+    return out
+
+
+def period_misfits(s, db):
+    """Interim reports with a period that is neither 3 months, the year to date, nor a full financial year (year ends
+    taken from the company record and from 12-month periods in its annual reports). A wrong length passes every check."""
+    ends = collections.defaultdict(set)
+    for c, m in s.execute(f"select company_id, fiscal_year_end_month from {db}.company"):
+        ends[c].add(m)
+    for c, m in s.execute(f"""select distinct f.company_id, cast(strftime('%m', pp.end_date) as int) from {db}.financial_fact f
+            join {db}.reporting_period pp using(period_id) join {db}.report_document d using(document_id)
+            where d.category='ANNUAL' and pp.months=12"""):
+        ends[c].add(m)
+    out = set()
+    for c, d, end, m in s.execute(f"""select distinct f.company_id, f.document_id, pp.end_date, pp.months from {db}.financial_fact f
+            join {db}.reporting_period pp using(period_id) join {db}.report_document rd using(document_id)
+            where rd.category='INTERIM' and pp.period_kind='DURATION' and pp.months<>3"""):
+        mo = int(end[5:7])
+        if not any(m == (mo - e - 1) % 12 + 1 for e in ends[c] if e):
+            out.add(d)
+    return out
+
+
+def conflicts(s, db):
+    """Pairs of reports giving one company, scope, period and standard line values more than 10x apart."""
+    out = set()
+    for a, b in s.execute(f"""select x.document_id, y.document_id from {db}.financial_fact x
+            join {db}.reported_label rx on rx.label_id=x.label_id join {db}.financial_fact y
+            on y.company_id=x.company_id and y.period_id=x.period_id and y.entity_scope=x.entity_scope and y.document_id>x.document_id
+            join {db}.reported_label ry on ry.label_id=y.label_id and ry.line_item_id=rx.line_item_id
+            join {db}.line_item li on li.line_item_id=rx.line_item_id
+            where li.value_kind='MONEY' and abs(x.value)>=1000 and abs(y.value)>=1000
+              and (abs(x.value)>10*abs(y.value) or abs(y.value)>10*abs(x.value))"""):
+        out.add((a, b))
+    return out
+
+
 def audit(staged, published, vision_docs):
     s = sqlite3.connect(staged)
     s.execute(f"attach '{published}' as p")
@@ -82,8 +146,13 @@ def audit(staged, published, vision_docs):
                  "gained_outside_vision": dict(out_v(gain).most_common(20))}
     o1, o2 = outliers(s, "p"), outliers(s, "main")
     r["new_unit_outliers"] = sorted(o2 - o1)
+    # Plausibility of what the arithmetic checks cannot see: scale, period length, agreement between reports.
+    for name, fn in (("scale_outliers", scale_outliers), ("period_misfits", period_misfits), ("conflicts_10x", conflicts)):
+        before, after = fn(s, "p"), fn(s, "main")
+        r[name] = {"before": len(before), "after": len(after), "new": sorted(after - before)[:50]}
     bad = bool(r["extracted_regressed"] or r["now_empty"] or r["integrity"] != "ok" or r["fk_errors"]
-               or r["diff"]["lost_outside_vision"] or r["diff"]["changed_outside_vision"] or r["new_unit_outliers"])
+               or r["diff"]["lost_outside_vision"] or r["diff"]["changed_outside_vision"] or r["new_unit_outliers"]
+               or any(r[n]["new"] for n in ("scale_outliers", "period_misfits", "conflicts_10x")))
     return r, bad
 
 

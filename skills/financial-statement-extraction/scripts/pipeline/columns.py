@@ -369,6 +369,55 @@ def _cum_months(date, fye):
     return n if n in (3, 6, 9, 12) else None
 
 
+def fit_interim_periods(cols, stmt, ctx, issues):
+    """In an interim report a period is the quarter (3), the year to date, or a full financial year ending in a
+    year-end month. Arithmetic checks cannot see a wrong length, so a column claiming any other period is a
+    misread header or a misprint ('Year Ended 30 June' over a first-quarter cash flow). Give it the year-to-date
+    or quarter length when exactly that slot is free for its scope and date; otherwise drop the column."""
+    if ctx.get("category") != "INTERIM" or stmt not in ("IS", "CF") or not ctx.get("fye"):
+        return cols
+    fye = ctx["fye"]
+    ends = {fye} | set(ctx.get("fye_extra") or ())
+
+    def fits(c):
+        m, d = c.get("months"), c.get("date")
+        if not m or not d:
+            return True
+        mo = int(d[5:7])
+        return m == 3 or m == _cum_months(d, fye) or (m == 12 and mo in ends) or any(
+            m == _cum_months(d, e) for e in ends)
+
+    # the only end dates an interim's own columns use: the period end, a year before it, the last year end
+    pe = ctx.get("period_end")
+    dates = set()
+    if pe:
+        y, mo = int(pe[:4]), int(pe[5:7])
+        dates = {pe, _iso(y - 1, mo, calendar.monthrange(y - 1, mo)[1])}
+        for e in ends:
+            ye = y if e <= mo else y - 1
+            dates.add(_iso(ye, e, calendar.monthrange(ye, e)[1]))
+    keep = []
+    for c in cols:
+        if fits(c):
+            keep.append(c)
+            continue
+        taken = {o["months"] for o in cols if o is not c and o["scope"] == c["scope"] and o["date"] == c["date"]}
+        free = [m for m in dict.fromkeys([_cum_months(c["date"], fye), 3]) if m and m not in taken]
+        if c["date"] not in dates:
+            # the date is suspect too (e.g. a year joined to the wrong 'Year ended 31 March'): no guess is safe
+            free = []
+        if free:
+            issues.append(f"{c['scope']} {c['date']}: printed/read as {c['months']} months, which is not a period of "
+                          f"this financial year; read as {free[0]} months")
+            c["months"] = free[0]
+            c["period_refit"] = True
+            keep.append(c)
+        else:
+            issues.append(f"{c['scope']} {c['date']}: {c['months']} months is not a period of this financial year "
+                          f"and no free slot fits; column dropped")
+    return keep
+
+
 def _fill_months(cols, title, label_signs, head, fye, issues):
     """Resolve 'year to date' marks to a number, then give columns with no mark of their own the table's period,
     taken from the title or the label area. A table-wide period never makes a column repeat another's claim."""
@@ -403,6 +452,9 @@ def _col_for(cols, x1, slack=16):
     return j if abs(cols[j]["x"] - x1) <= slack + 24 else None
 
 
+_PCT = re.compile(r"\(?[-+]?\d{1,5}(?:\.\d+)?\s*%\)?")
+
+
 def read_rows(rows, spec, stmt):
     """Turn table rows into labelled values aligned to columns."""
     out, section, prev_text, block = [], "NONE", "", ""
@@ -410,12 +462,21 @@ def read_rows(rows, spec, stmt):
     keep_ids = {id(c) for c in spec["cols"]}
     for r in rows:
         nums, labs = [], []
+        dropped_pct = False
         for w in r:
             if is_num(w[4]) or w[4] in DASH:
                 nums.append(w)
+            elif _PCT.fullmatch(w[4].strip()) and w[0] >= all_cols[0]["x"] - 75:
+                # a '% change' column printed beside the figures, e.g. '(33%)': not part of the label
+                dropped_pct = True
+                continue
             else:
                 labs.append(w)
         label = " ".join(w[4] for w in labs).strip()
+        if dropped_pct:
+            label = re.sub(r"\s*\(\s*$", "", label)
+        if re.fullmatch(r"(?i)page\s*\d*\s*of\s*\d*", label):
+            continue
         code = normalize.section_code(label) if label else None
         data = [w for w in nums if not (w[4] in DASH)]
         n_label = normalize.label(label) if label else ""

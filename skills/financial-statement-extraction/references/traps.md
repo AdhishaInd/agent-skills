@@ -20,6 +20,12 @@ Learned on Colombo Stock Exchange filings; exchange API quirks are in the compan
 - New funds: first period may be e.g. 5 months - only via the `FIRST_PERIOD` exception, stored from the 1st.
 - Interim side columns such as "Group unaudited year ended 31 Dec" that do not match the December report: skip.
 - The audited prior-year column in an interim is the year-end, 12 months.
+- **A wrong period length passes every check.** Companies print "Year Ended 30 June" over a first-quarter cash flow
+  (REEF), "Nine months ended 31 March" over a Q4 statement (LUMX), and headers get assigned to the wrong columns.
+  In an interim, a period is only the quarter, the year to date, or a full financial year ending in a year-end month;
+  the parser (`fit_interim_periods`) repairs a column only when that slot is free and its date is the report's period
+  end, a year before, or the last year end - otherwise it drops it. Year-end changes go in the reviewed
+  `FYE_CHANGED` list. The audit counts misfits (`period_misfits`).
 
 ## 2. Units and currency
 - Units are printed in a header, a page note ("all amounts in Sri Lanka Rupees '000"), or only in the column header
@@ -27,7 +33,16 @@ Learned on Colombo Stock Exchange filings; exchange API quirks are in the compan
 - No unit printed: EPS x shares, or the same report's BS header, can fix it - say so. The loader's unit proof uses
   other reports as independent witnesses (restated comparatives broke a merged lookup once).
 - Statements in USD (functional currency, e.g. MGT): currency USD, not converted.
-- Total-assets outliers (x300 off the company's median) catch scale errors the arithmetic cannot.
+- **A wrong stated unit passes every check** (the sums hold at any scale): a header saying Rs.'000 over figures in
+  rupees (REEF Q1 FY26 group P&L, 1000x), Rs. Mn tables stored as rupees, Rs.'000 cash flows stored as rupees (HARI).
+  The loader compares every statement column (per statement, scope, currency) with the same lines in the company's
+  other reports; >= 300x off is suspect. It rescales only on proof: exact figures in a report not itself suspect for
+  that column, or a proven column in the same table (one printed unit). Reports can agree on a wrong scale, so the
+  proof nearest the company's level wins; a report confirming the stated unit keeps it. Unproven: refused, logged as
+  `UNIT_SANITY`. Check per statement, never per period: a correct cash flow beside a wrong P&L hid REEF's error.
+- USD convenience translations (banks, LION, MGT) are stored with currency USD - compare like with like.
+- Total-assets outliers (x300 off the company's median) were the only scale guard once and missed P&L and cash flow
+  errors; the audit now also reports column scale outliers and 10x conflicts between reports.
 
 ## 3. Scope, audit status, restatements
 - Bank-only figures: COMPANY. Company with no subsidiaries: COMPANY. A company that lost its subsidiary: COMPANY.
@@ -67,3 +82,8 @@ Learned on Colombo Stock Exchange filings; exchange API quirks are in the compan
 - Every published change goes through a staged load and audit (`stage_publish.py`).
 - Agents' "MISSING because the checker does not recognise ..." is a code task, not a reading task.
 - Spot-check loaded figures against page images after parser changes (a sample, not all).
+- Junk that passes: share-price tables, shareholder lists and "Page 6 of 10" footers below a statement load as lines
+  when the statement's end line is misspelt ("equivelents"); "% change" columns glued into labels ("Revenue (33%)")
+  stop exact alias mapping. Match end lines loosely and keep % tokens out of labels.
+- Use an analysis as a test: reading one company's numbers end to end (quarter sums, a 1000x quarter, a cash flow
+  that cannot be a year) found defects that ~2,700 reports of arithmetic checks had passed.

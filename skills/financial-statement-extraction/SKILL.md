@@ -26,7 +26,10 @@ adjusted to make a check pass. Checks allow only printed rounding (a few units o
 terms, 3 for three, 5 for more), so a total 1-2 units off its parts passes and more is a reading or print error.
 This is why a parser, an OCR engine, a vision transcription and a human can all feed the same database: the checks,
 not the source, decide. When a check fails, either the reading is wrong (re-read) or the print is wrong
-(record why, leave it out).
+(record why, leave it out). The checks are blind to two things, so plausibility guards cover them: the **scale**
+(a wrong stated unit adds up at any size) and the **period length** (a quarter labelled as a year adds up too). The
+loader tests each column against the company's other reports, the parser tests interim periods against the financial
+year, and the audit counts both (references/traps.md, sections 1-2).
 
 Corollaries that matter in practice:
 - Labels stay exactly as printed and map to standard line items only through exact aliases (`label_alias`), never
@@ -105,7 +108,8 @@ python -I scripts/stage_publish.py --project <dir>            # stage + audit on
 python -I scripts/stage_publish.py --project <dir> --publish  # after reading the audit
 ```
 Publishing is refused if the audit shows reports leaving EXTRACTED, reports becoming empty, integrity/FK errors,
-new unit outliers, or facts lost/changed in reports that have no transcription file (that means a code change touched
+new unit or column-scale outliers, interim periods that fit no financial year, new 10x conflicts between reports,
+or facts lost/changed in reports that have no transcription file (that means a code change touched
 data nobody re-read). Gains outside vision reports are normal (a resolved conflict frees another report's column) but
 look at each one. Publish in stages (finished batches first) so work survives interruptions; then run the project's
 tests if it has any.

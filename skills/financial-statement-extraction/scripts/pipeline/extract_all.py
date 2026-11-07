@@ -4,6 +4,11 @@ import argparse, concurrent.futures as cf, datetime as dt, json, os, pathlib, sq
 warnings.filterwarnings("ignore")
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import parse_report as P
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "reviewed"))
+try:
+    from scan_readings import FYE_CHANGED
+except ImportError:
+    FYE_CHANGED = {}
 
 def work(job):
     ctx, out = job
@@ -32,7 +37,7 @@ def jobs(db, outdir, a):
         if not pathlib.Path(path).exists(): continue
         f = outdir / f"{doc}.json"
         if f.exists() and not a.force: continue
-        out.append((dict(document_id=doc, ticker=tk, category=cat, title=title, period_end=pe, path=path, template=tpl, fye=fye), str(f)))
+        out.append((dict(document_id=doc, ticker=tk, category=cat, title=title, period_end=pe, path=path, template=tpl, fye=fye, fye_extra=FYE_CHANGED.get(tk, ())), str(f)))
     return out[:a.limit] if a.limit else out
 
 if __name__ == "__main__":

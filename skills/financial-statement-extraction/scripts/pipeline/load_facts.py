@@ -3,7 +3,7 @@
 Rebuilds statement data from scratch each run: financial_fact, reported_label and reporting_period.
 Usage: python -I pipeline/load_facts.py <db> <extracted_dir>
 """
-import collections
+import math, statistics, collections
 import datetime as dt
 import glob
 import json
@@ -307,6 +307,101 @@ for cid, doc, stmt, col, lines in deferred:
     stats[f"unit proven from other reports: x{choice}"] += 1
     if load_column(cid, doc, stmt, col, lines, choice, {}):
         doc_tables[doc].add(stmt)
+
+# Stated units checked against the company's other reports. Arithmetic checks pass at any scale, so a header that
+# says Rs.'000 over figures printed in rupees (REEF 48796) loads 1000x too large unseen. A column is suspect when
+# its lines sit >= 300x (or <= 1/300) from the same lines' median in the company's other reports (amounts per month
+# for periods). A suspect column is rescaled only when another report proves the exact figures at one other scale
+# (>= 3 lines, within 0.2%), as for columns printed without a unit; otherwise its facts are removed.
+def unit_sanity():
+    per_month = lambda v, m: abs(v) / (m or 1)
+    level = collections.defaultdict(list)    # (cid, scope, currency, kind, label) -> [(doc, size)]
+    cols = collections.defaultdict(list)     # one statement column: (cid, doc, statement, pid, scope, currency)
+    for fid, cid, doc, pid, scope, cur, lid, v, m, kind, nl, sec, raw, st in con.execute("""
+            SELECT f.fact_id, f.company_id, f.document_id, f.period_id, f.entity_scope, f.currency, f.label_id, f.value,
+                   p.months, p.period_kind, rl.normalized_label, rl.section, rl.raw_label, rl.statement_type_id
+            FROM financial_fact f JOIN reporting_period p USING (period_id) JOIN reported_label rl USING (label_id)
+            WHERE f.value <> 0 AND rl.statement_type_id IN (1, 2, 3, 4)"""):
+        if PER_SHARE.search(raw):
+            continue
+        level[(cid, scope, cur, kind, lid)].append((doc, per_month(v, m)))
+        cols[(cid, doc, st, pid, scope, cur)].append((fid, lid, v, m, kind, nl, sec, raw))
+    suspects, col_r = [], {}
+    for key, facts in cols.items():
+        cid, doc, st, pid, scope, cur = key
+        ratios = []
+        for fid, lid, v, m, kind, *_ in facts:
+            others = [x for d, x in level[(cid, scope, cur, kind, lid)] if d != doc]
+            if len(others) >= 3:
+                ratios.append(per_month(v, m) / statistics.median(others))
+        if len(ratios) >= 3:
+            r = statistics.median(ratios)
+            col_r[key] = r
+            if not 1 / 300 < r < 300:
+                suspects.append((key, facts, r, len(ratios)))
+    suspect_keys = {x[0] for x in suspects}
+    proven_in = collections.defaultdict(set)   # (doc, statement) -> scales proven for a column of that table
+    decided = {}
+    for key, facts, r, n in suspects:
+        cid, doc, st, pid, scope, cur = key
+        kind, months = facts[0][4], facts[0][3]
+        end = con.execute("SELECT end_date FROM reporting_period WHERE period_id=?", (pid,)).fetchone()[0]
+        proven = set()
+        for odoc, in con.execute("SELECT DISTINCT document_id FROM financial_fact WHERE company_id=? AND document_id<>?", (cid, doc)):
+            if (cid, odoc, st, pid, scope, cur) in suspect_keys:
+                continue   # a report flagged for the same column is no witness: wrong reports can agree
+            o = {}
+            for sec, nl, val in con.execute("""SELECT rl.section, rl.normalized_label, f.value FROM financial_fact f JOIN reported_label rl USING (label_id)
+                    JOIN reporting_period p USING (period_id) WHERE f.document_id=? AND f.entity_scope=? AND f.currency=? AND p.end_date=?
+                    AND p.period_kind=? AND COALESCE(p.months,0)=? AND rl.statement_type_id=?""", (odoc, scope, cur, end, kind, months or 0, st)):
+                o[(sec, nl)] = val
+            rs = [o[(sec, nl)] / v for _, _, v, _, _, nl, sec, raw in facts if (sec, nl) in o]
+            for scale in (1, 1000, 1000000, 0.001, 0.000001):
+                if len(rs) >= 3 and all(abs(x / scale - 1) < 0.002 for x in rs):
+                    proven.add(scale)
+        # Reports can disagree with each other (two wrong reports agree on the wrong scale). Take the proven scale
+        # that brings the column to the company's usual level; with none near it, a report confirming the stated
+        # scale keeps it (the company median may itself be misled by its own wrong reports).
+        near = [k for k in proven if 1 / 30 < r * k < 30]
+        decided[key] = (min(near, key=lambda k: abs(math.log(r * k))) if near else 1 if 1 in proven else None)
+        if decided[key]:
+            proven_in[(doc, st)].add(decided[key])
+    changed_docs = set()
+    for key, facts, r, n in suspects:
+        cid, doc, st, pid, scope, cur = key
+        k, how = decided[key], "exact figures in another report"
+        calm = [col_r[c] for c in col_r if c[1] == doc and c[2] == st and c not in suspect_keys]
+        if k is None and any(1 / 3 < r / x < 3 for x in calm):
+            k = 1   # an unflagged column of the same table (one printed unit) sits at the same level
+        if k == 1 or (k is None and 1 in proven_in[(doc, st)]):
+            print(f"UNIT_SANITY doc={doc} stmt={st} period={pid} scope={scope} {cur} lines={n} median_ratio={r:.4g} -> "
+                  "kept (stated unit confirmed by another report)", flush=True)
+            continue
+        if k is None and len(proven_in[(doc, st)]) == 1:
+            # another column of the same table (one printed unit) was proven; take its scale if this column fits it
+            k0 = next(iter(proven_in[(doc, st)]))
+            if 1 / 3 < r * k0 < 3:
+                k, how = k0, "same table's proven unit"
+        if k is None and n < 5:
+            continue   # too few comparable lines to overrule the printed unit
+        changed_docs.add(doc)
+        print(f"UNIT_SANITY doc={doc} stmt={st} period={pid} scope={scope} {cur} lines={n} median_ratio={r:.4g} -> "
+              + (f"rescale x{k:g} ({how})" if k else "refuse"), flush=True)
+        if k:
+            con.executemany("UPDATE financial_fact SET value=ROUND(value*?, 4), unit_scale=unit_scale*? WHERE fact_id=?",
+                            [(k, k, f[0]) for f in facts])
+            stats[f"stated unit disproved by other reports: rescaled x{k:g}"] += 1
+        else:
+            con.executemany("DELETE FROM financial_fact WHERE fact_id=?", [(f[0],) for f in facts])
+            refused["column refused: stated unit >=300x off the company's other reports, no proof of the right one"] += 1
+            stats["facts"] -= len(facts)
+    for doc in changed_docs:
+        doc_tables[doc] = {s for s, in con.execute("""SELECT DISTINCT st.code FROM financial_fact f JOIN reported_label rl USING (label_id)
+                JOIN statement_type st USING (statement_type_id) WHERE f.document_id=?""", (doc,))}
+    con.commit()
+
+
+unit_sanity()
 
 for f in files:
     doc = int(pathlib.Path(f).stem)

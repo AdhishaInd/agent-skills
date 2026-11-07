@@ -18,7 +18,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
 import normalize  # noqa: E402
 from checks import check_table, find  # noqa: E402
-from columns import interpret_columns, read_rows  # noqa: E402
+from columns import interpret_columns, read_rows, fit_interim_periods  # noqa: E402
 import ocr_words  # noqa: E402
 from segment import statement_tables  # noqa: E402
 
@@ -29,7 +29,7 @@ SHORT_REPORT_IMAGE_PAGES = 25
 
 _BS_END = re.compile(r"^total (equity and liabilities|liabilities and equity|equity liabilities|liabilities and shareholders funds|shareholders funds and liabilities|capital and liabilities|equity and liability)")
 _BS_AFTER = re.compile(r"per (ordinary |voting )?share|contingent|commitments|net asset")
-_CF_END = re.compile(r"^cash and cash equivalents? (at|as at) (the )?(end|close)|^closing cash|^cash and cash equivalents (at )?end of")
+_CF_END = re.compile(r"^cash and cash equiv[a-z]*ents? (at|as at) (the )?(end|close)|^closing cash|^cash and cash equiv[a-z]*ents (at )?end of")
 _IS_FOREIGN = re.compile(r"^total assets$|^stated capital$|^total equity$|^total liabilities$|^total equity and liabilities$|^property plant and equipment$|^retained earnings$|^cash and cash equivalents$|^inventories$|^trade and other (receivables|payables)$|^net cash")
 
 
@@ -124,6 +124,8 @@ def read_tables(doc, ctx):
         spec, issues = interpret_columns(rows_first, ctx, seg["title"])
         table = dict(stmt=seg["stmt"], title=seg["title"][:120], page=seg["pages"][0][0] + 1, issues=issues, rows=[], columns=[], checks=[], extractor=extractor)
         if spec and spec["cols"]:
+            spec["cols"] = fit_interim_periods(spec["cols"], seg["stmt"], ctx, issues)
+        if spec and spec["cols"]:
             rows = []
             for i, (pno, body) in enumerate(seg["pages"]):
                 part = body[spec["first"]:] if i == 0 else body
@@ -154,7 +156,7 @@ def read_tables(doc, ctx):
             table["rows"] = trim_rows(seg["stmt"], rows)
             if len(table["rows"]) < len(rows):
                 table["rows_trimmed"] = len(rows) - len(table["rows"])
-            table["columns"] = [{k: c[k] for k in ("scope", "date", "months", "audit", "unit", "unit_known", "currency")} | ({"unit_source": c["unit_source"]} if "unit_source" in c else {}) for c in spec["cols"]]
+            table["columns"] = [{k: c[k] for k in ("scope", "date", "months", "audit", "unit", "unit_known", "currency")} | ({"unit_source": c["unit_source"]} if "unit_source" in c else {}) | ({"period_refit": True} if c.get("period_refit") else {}) for c in spec["cols"]]
             if (seg["stmt"] == "IS" and not find(table["rows"], r"before (income )?(tax|taxation)")
                     and not (find(table["rows"], r"^(revenue|turnover|sales)\b")
                              and find(table["rows"], r"^gross (profit|loss)\b"))
