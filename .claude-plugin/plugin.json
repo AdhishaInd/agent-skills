@@ -1,0 +1,9 @@
+{
+  "name": "financial-statements",
+  "description": "Extract checked income statement, balance sheet and cash flow figures from company report PDFs into a database; includes a Colombo Stock Exchange (CSE) layer.",
+  "version": "1.0.0",
+  "author": { "name": "AdhishaInd", "url": "https://github.com/AdhishaInd" },
+  "repository": "https://github.com/AdhishaInd/agent-skills",
+  "license": "MIT",
+  "keywords": ["finance", "financial-statements", "pdf", "extraction", "ocr", "sqlite", "cse", "sri-lanka"]
+}

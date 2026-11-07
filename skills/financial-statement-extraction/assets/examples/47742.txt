@@ -1,0 +1,69 @@
+# LIOC interim, quarter to 31 March 2025. Scan. Pages 2-5 read from images: "all amounts in Sri Lanka Rupees 000's".
+UNITS 1000 LKR
+TABLE IS 3 | Statement of Comprehensive Income
+COLS COMPANY 2025-03-31 3 UNKNOWN 1000 LKR ; COMPANY 2024-03-31 3 UNKNOWN 1000 LKR ; COMPANY 2025-03-31 12 AUDITED 1000 LKR ; COMPANY 2024-03-31 12 AUDITED 1000 LKR
+Revenue | 67,101,255 | 75,101,379 | 276,287,407 | 263,568,721
+Cost of Sales | (61,535,045) | (69,349,784) | (255,263,005) | (239,550,439)
+Gross Profit | 5,566,209 | 5,751,595 | 21,024,402 | 24,018,282
+Other Operating Income | 53,762 | 34,448 | 185,612 | 235,857
+Selling and Distribution Expenses | (2,279,012) | (2,177,600) | (8,723,186) | (7,896,403)
+Administrative Expenses | (876,060) | (903,412) | (3,142,285) | (3,548,774)
+Operating Profit/(Loss) | 2,464,900 | 2,705,031 | 9,344,543 | 12,808,962
+Finance Income | 1,187,205 | 1,720,654 | 5,024,589 | 5,033,468
+Finance Expenses | (183,426) | (203,373) | (505,602) | (759,070)
+Profit/(Loss) Before Tax | 3,468,679 | 4,222,312 | 13,863,530 | 17,083,360
+Income Tax | (741,446) | (798,099) | (2,714,925) | (3,138,366)
+Profit/(Loss) for the period | 2,727,232 | 3,424,213 | 11,148,605 | 13,944,994
+Other Comprehensive Income /(Loss)
+Items that will not be reclassified to profit or loss:
+Other Comprehensive Income /(Loss) | (2,130) | (37,084) | (2,130) | (37,084)
+Income tax on other Comprehensive income/(loss) | 320 | 5,563 | 320 | 5,563
+Fair Value Adjustment on CPSTL | 737,000 | 454,000 | 737,000 | 454,000
+Total Comprehensive Income/(Loss), Net of Tax | 3,462,422 | 3,846,692 | 11,883,795 | 14,367,473
+Earnings Per Share | 5.12 | 6.43 | 20.94 | 26.19
+
+TABLE CF 5 | Cash Flow Statement
+COLS COMPANY 2025-03-31 12 AUDITED 1000 LKR ; COMPANY 2024-03-31 12 AUDITED 1000 LKR
+Cash Flows From/(Used in) Operating Activities
+Profit /(Loss)before Income Tax Expense | 13,863,530 | 17,083,360
+Adjustments for
+Finance Income | (5,024,589) | (5,033,468)
+Finance Expenses | 505,602 | 759,070
+Dividend Income | - | (120,000)
+Increase/(Decrease) in Allowances for Impairment | 33,070 | 107,175
+(Profit)/Loss on Sale of Property Plant and Equipment | (3,622) | (116)
+Defined Benefit Plan Cost | 11,101 | 5,435
+Depreciation | 568,453 | 427,121
+Right to use Assets Adjsutment | 19,794 | -
+Amotisation Right to use Assets | 40,135 | 982
+Lease Interest - Right of - use Assets | 5,751 | 6,147
+Exchange (Gain )/ Loss on Borrowings | 7,718 | (77,080)
+Operating Profit/(Loss) before Working Capital Changes | 10,026,942 | 13,158,625
+Changes in Working Capital
+(Increase)/ Decrease in Inventories | (17,435,056) | 11,725,203
+(Increase) /Decrease in Trade and Other Receivables | 3,630,103 | (11,746,739)
+Increase/ (Decrease) in Trade and Other Payables | 4,609,204 | 7,855,602
+Cash Generated From/(Used in) Operations | 831,193 | 20,992,693
+Income Tax | (3,220,965) | (3,531,660)
+Finance Expenses | (505,602) | (759,070)
+Defined Benefit Paid | (24,326) | (10,899)
+Net Cash Flows From Operating Activities | (2,919,700) | 16,691,064
+Cash Flows from Investing Activities
+Dividend Income | - | 120,000
+Acquisition of Property, Plant and Equipment | (831,964) | (1,423,118)
+Finance Income | 5,024,589 | 5,033,468
+Proceeds on disposal of Property, Plant and Equipment | 3,998 | 122
+Withdrawal/(Investment) in Long Term Investments | (15,403,055) | -
+Investment In TPTL | (39,200) | (49,000)
+Withdrawal/(Investment) in Short Term Investments | 9,409,379 | (17,883,314)
+Net (Investment)/Withdrawal in Gratuity Fund | (2,395) | 16,826
+Net Cash Flows From/(Used in) Investing Activities | (1,838,648) | (14,185,016)
+Cash Flows From Financing Activities
+Proceed from Interest bearing borrowings | 68,224,599 | 98,378,748
+Repayments of Interest bearing borrowings | (65,094,144) | (98,463,397)
+Dividend Paid | (2,650,813) | (2,129,863)
+Payment to Lease Creditor | (74,993) | (4,354)
+Net Cash Flows From/(Used in) Financing Activities | 404,649 | (2,218,866)
+Net Increase / (Decrease) in Cash and Cash Equivalents | (4,353,699) | 287,182
+Cash and Cash Equivalents at the Beginning of the Year | 6,277,439 | 5,990,257
+Cash and Cash Equivalents at the End of the Period | 1,923,740 | 6,277,439

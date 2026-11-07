@@ -1,0 +1,56 @@
+# RGEM interim, nine months to 31 Dec 2024. Scan. Totals print with no label: bracketed labels are supplied, not printed.
+TABLE IS 2 | Comprehensive Income Statement
+COLS COMPANY 2024-12-31 3 UNAUDITED 1 LKR ; COMPANY 2023-12-31 3 UNAUDITED 1 LKR ; COMPANY 2024-12-31 9 UNAUDITED 1 LKR ; COMPANY 2023-12-31 9 UNAUDITED 1 LKR ; COMPANY 2024-03-31 12 AUDITED 1 LKR
+Turnover | 49,215,518 | 52,008,925 | 166,882,863 | 166,668,564 | 234,414,752
+Cost of Sales | (27,035,001) | (25,133,402) | (79,622,991) | (71,328,892) | (126,614,211)
+Gross profit | 22,180,517 | 26,875,523 | 87,259,872 | 95,339,672 | 107,800,541
+Other Income | 42,745 | 73,596 | 168,063 | 320,596 | 304,502
+Administration Expenses | (32,412,706) | (29,837,003) | (83,138,686) | (75,370,645) | (99,645,870)
+Distribution Expenses | 66,783 | (10,697) | (478,420) | (6,366) | (184,925)
+Profit/(Loss)from operation | (10,122,660) | (2,898,581) | 3,810,829 | 20,283,257 | 8,274,248
+Finance Income | - | - | - | - | 382,664
+Finance Costs | (3,401,860) | (1,603,490) | (9,997,081) | (5,076,299) | (11,281,717)
+Other Financial Items | - | - | - | - | 2,404,297
+Exchange Loss/(Gain) Adjustment | 34,094 | - | 443,793 | - | -
+Net Finance costs | (3,367,766) | (1,603,490) | (9,553,288) | (5,076,299) | (8,494,756)
+Profit/(Loss) Before Taxation | (13,490,426) | (4,502,071) | (5,742,459) | 15,206,958 | (220,508)
+Income Tax Expenses | - | - | - | - | -
+[Profit for the period] | (13,490,426) | (4,502,071) | (5,742,459) | 15,206,958 | (220,508)
+Other Comprehensive Income | - | - | - | - | -
+Total Comprehensive Income | (13,490,426) | (4,502,071) | (5,742,459) | 15,206,958 | (220,508)
+Earning / (Loss) Per Share | (5.62) | (1.88) | (2.39) | 6.34 | (0.09)
+
+TABLE BS 3 | Financial Position as at 31st Dec 2024
+COLS COMPANY 2024-12-31 0 UNAUDITED 1 LKR ; COMPANY 2023-12-31 0 UNAUDITED 1 LKR ; COMPANY 2024-03-31 0 AUDITED 1 LKR
+ASSETS
+NON CURRENT ASSETS
+Property Plant & Equipment | 152,752,796 | 144,361,806 | 131,390,354
+Right of Use Assets | 6,241,003 | - | 8,024,147
+| 158,993,799 | 144,361,806 | 139,414,501
+Investment in Stock of Gems Stones | 12,477,343 | 9,021,977 | 12,171,120
+| 12,477,343 | 9,021,977 | 12,171,120
+Stock | 2,006,257 | 5,482,027 | 2,265,929
+Trade & Other Receivables | 9,741,968 | 11,728,197 | 10,203,362
+Deposits & Prepayments | 3,051,932 | 6,520,383 | -
+Cash in Hand | 26,152,763 | 33,430,079 | 39,559,923
+| 40,952,920 | 57,160,686 | 52,029,214
+[Total assets] | 212,424,062 | 210,544,469 | 203,614,835
+EQUITY LIABILITIES
+Stated Capital | 24,000,000 | 24,000,000 | 24,000,000
+Retained Earnings | (99,043,853) | (85,215,587) | (93,301,394)
+Other component of Equity | 145,836,218 | 151,745,778 | 145,815,840
+[Total equity] | 70,792,365 | 90,530,191 | 76,514,446
+NON CURRENT LIABILITIES
+Interest Bearing Borrowing | 49,877,897 | 51,547,929 | 50,563,207
+Lease Creditors Payable After One Year | 41,610,077 | 23,863,978 | 18,356,397
+Gratuity Provision | 11,967,134 | 10,327,478 | 11,652,134
+Deferred Liability | 1,813,242 | - | 1,813,242
+[Total non-current liabilities] | 105,268,350 | 85,739,385 | 82,384,980
+CURRENT LIABILITIES
+Bank overdraft | 13,360,397 | 9,798,545 | 14,381,113
+Amount Due to Directors | - | - | -
+Creditors & Accrued Expenses | 19,161,052 | 19,614,700 | 14,966,706
+Lease Creditor Payable in the Year | 1,132,251 | 2,549,998 | 4,529,005
+Interest Bearing Borrowing | 2,709,646 | 2,311,650 | 10,838,585
+[Total current liabilities] | 36,363,347 | 34,274,893 | 44,715,409
+[Total equity and liabilities] | 212,424,062 | 210,544,469 | 203,614,835

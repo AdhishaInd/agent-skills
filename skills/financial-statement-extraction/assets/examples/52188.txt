@@ -1,0 +1,62 @@
+# CAL Three Year Closed End Fund (CALU), Annual Report for the first period 31 Oct 2025 to 31 Mar 2026 (5 months). Closed-end unit trust; single entity (COMPANY).
+# BS/CF show UNCHECKED: no equity line (unitholders fund instead) and no investing section in CF. Hand-checked: assets sum, assets - liabilities = net assets, CF sections sum to net change: all agree.
+# Scanned; read from page images 15, 16, 18. Only one column (no comparative). Fund has no equity: "Net assets attributable to unitholders" is the unitholders' fund.
+TABLE IS 15 | Statement of Profit or Loss and Other Comprehensive Income
+COLS COMPANY 2026-03-31 5 AUDITED 1 LKR
+Investment income
+Interest income | 271,622,664
+Unrealised gain on financial assets at fair value through profit or loss | 167,362
+Realised loss on financial assets at fair value through profit or loss | (36,924,004)
+Realised gains on financial assets at amortised cost | 20,753,950
+Total investment income | 255,619,972
+Other income | 406,595
+Expenses
+Management fees | (42,781,482)
+Trustee fees | (5,554,323)
+Custodian fees | (120,164)
+Audit fees | (175,239)
+Miscellaneous expenses | (26,197)
+Impairment charge of financial assets at amortised cost | (627,748)
+Total operating expenses | (49,285,153)
+Profit before tax | 206,741,414
+Income tax expense | -
+Net profit after tax for the period | 206,741,414
+Other comprehensive income | -
+Total comprehensive income for the period | 206,741,414
+Increase in net assets attributable to unitholders for the period | 206,741,414
+Earnings per unit | 0.25
+
+TABLE BS 16 | Statement of Financial Position
+COLS COMPANY 2026-03-31 0 AUDITED 1 LKR
+Assets
+Cash and cash equivalents | 500,931
+Financial assets at fair value through profit or loss | 350,167,362
+Financial assets at amortised cost | 8,312,371,913
+Other receivables | 64,370
+Total assets | 8,663,104,576
+Liabilities
+Accrued expenses | 10,247,805
+Total liabilities | 10,247,805
+Net assets | 8,652,856,771
+Unitholders' fund
+Net assets attributable to unitholders | 8,652,856,771
+Published net assets value per unit (Rs.) | 10.2863
+
+TABLE CF 18 | Statement of Cash Flows
+COLS COMPANY 2026-03-31 5 AUDITED 1 LKR
+Cash flows from operating activities
+Interest received and realised loss | 138,479,990
+Management fees, trustee fees and custodian fees paid | (38,383,403)
+Other income received | 21,096,175
+Other expenses paid | (26,197)
+Net investment in unit trust | (350,000,000)
+Net investment in trust certificate | (4,432,130,992)
+Net investment in treasury bonds repurchase agreements | (3,784,649,999)
+Net cash used in operating activities | (8,445,614,426)
+Cash flows from financing activities
+Cash received on creation of units | 8,446,115,685
+Cash paid on redemption of units | (328)
+Net cash generated from financing activities | 8,446,115,357
+Net increase in cash and cash equivalents | 500,931
+Cash and cash equivalents as at the beginning of the period (Note A) | -
+Cash and cash equivalents as at the end of the period (Note B) | 500,931

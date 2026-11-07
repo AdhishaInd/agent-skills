@@ -1,0 +1,99 @@
+# CABO Annual Report 2024/25. Company only. Read from page images 25, 26, 28.
+TABLE IS 25 | Statement of Comprehensive Income
+COLS COMPANY 2025-03-31 12 AUDITED 1 LKR ; COMPANY 2024-03-31 12 AUDITED 1 LKR
+Revenue | 132,796,423 | 113,411,460
+Direct expenses | (42,592,994) | (42,179,910)
+Gross profit | 90,203,429 | 71,231,550
+Other income | 225,589,598 | 216,134,923
+Administration expenses | (85,096,210) | (79,981,466)
+Profit before taxation | 230,696,817 | 207,385,007
+Income tax expense | (23,773,455) | (36,819,737)
+Profit for the year | 206,923,362 | 170,565,270
+Other comprehensive income
+Items that will not be reclassified to profit or loss
+Net gain on equity at instruments at fair value through other comprehensive income | 1,043,699,939 | 590,648,296
+Re-measurement (loss) on retirement benefit obligation | (660,304) | (56,373)
+Related tax on re-measurement of retirement benefit obligation | 198,091 | 16,912
+Realised fair value (loss) on equity instruments at fair value through other comprehensive income | (1,108,998) | -
+Total other comprehensive income | 1,042,128,728 | 590,608,835
+Total comprehensive income | 1,249,052,090 | 761,174,105
+Basic earnings per share | 11.48 | 9.46
+Dividend per share | 1.00 | 1.00
+
+TABLE BS 26 | Statement of Financial Position
+COLS COMPANY 2025-03-31 0 AUDITED 1 LKR ; COMPANY 2024-03-31 0 AUDITED 1 LKR
+ASSETS
+Non-current assets
+Property, plant and equipment | 7,420,207 | 14,673,742
+Investment property | 473,775,203 | 495,428,246
+Financial assets- fair value through other comprehensive income | 3,432,163,743 | 2,052,668,056
+Financial assets - fair value through profit or loss | 34,621 | 63,592,959
+Financial assets - amortised cost | 54,219,178 | 55,282,483
+Total non - current assets | 3,967,612,952 | 2,681,645,486
+Current assets
+Trade and other receivables | 43,558,263 | 46,643,959
+Financial assets - amortised cost | 123,818,842 | 191,500,000
+Income tax receivable | 4,165,778 | -
+Cash and cash equivalents | 126,363,138 | 142,493,640
+Total current assets | 297,906,021 | 380,637,599
+Total assets | 4,265,518,973 | 3,062,283,085
+EQUITY AND LIABILITIES
+Capital and reserve
+Stated capital | 471,438,575 | 471,438,575
+Fair value reserve for financial assets FVOCI | 1,446,341,955 | 403,751,014
+Retained earnings | 2,197,590,872 | 2,009,161,718
+Total equity | 4,115,371,402 | 2,884,351,307
+Non-current liabilities
+Retirement benefit obligations | 12,933,948 | 10,527,822
+Deferred tax liability | 55,054,265 | 60,574,562
+Rental deposits | 25,365,033 | 23,986,465
+Total non-current liabilities | 93,353,246 | 95,088,849
+Current liabilities
+Deferred revenue | 26,914,078 | 28,713,568
+Rental deposit | 11,184,381 | 9,623,330
+Accruals and other payables | 17,261,952 | 40,003,840
+Income tax payable | - | 2,176,534
+Bank overdraft | 1,433,914 | 2,325,657
+Total current liabilities | 56,794,325 | 82,842,929
+Total liabilities | 150,147,571 | 177,931,778
+Total equity and liabilities | 4,265,518,973 | 3,062,283,085
+
+TABLE CF 28 | Statement of Cash Flows
+COLS COMPANY 2025-03-31 12 AUDITED 1 LKR ; COMPANY 2024-03-31 12 AUDITED 1 LKR
+Cash flows from operating activities
+Profit before taxation | 230,696,817 | 207,385,007
+Adjustments for :
+Depreciation | 22,195,265 | 23,698,366
+Provision for retirement benefit obligation | 1,745,822 | 1,412,629
+Interest income | (56,599,533) | (85,309,403)
+Dividend income | (143,980,391) | (108,959,297)
+Fair value gain on investment in unit trust | (4,051,396) | (1,252,959)
+Profit /(Loss) on disposal of shares | (1,455,404) | 24,502
+Operating profit before working capital changes | 48,551,180 | 36,998,845
+Decrease in trade and other receivables | 3,085,696 | 11,981,083
+(Decrease) / Increase in trade and other payables | (22,672,001) | 19,951,599
+Increase in rental deposits | 2,939,619 | 4,486,845
+(Decrease) / Increase in deferred income | (1,799,490) | 265,212
+| (18,446,176) | 36,684,739
+Cash generated from operations | 30,105,004 | 73,683,584
+WHT paid | (13,348,849) | (13,422,157)
+Income tax paid | (22,159,011) | (17,544,960)
+| (35,507,860) | (30,967,117)
+Net cash (used) / generated from operating activities | (5,402,856) | 42,716,467
+Cash flows from investing activities
+Acquisition of property, plant and equipment | (35,999) | -
+Adjustment at property, plant and equipment | 6,747,312 | -
+Proceeds from sale of shares | 2,687,502 | 1,869,375
+Interest received | 56,599,533 | 85,309,403
+Dividends received | 117,186,714 | 108,959,297
+Investment in unit trust | 63,558,338 | (62,340,000)
+Purchase of shares | (307,291,771) | (108,642,032)
+Net investment in fixed deposits | 67,681,158 | (1,459,270)
+Net investment in debentures | 1,063,305 | -
+Net cash generated from investing activities | 8,196,092 | 23,696,773
+Cash flow from financing activities
+Dividend paid | (18,031,995) | (18,031,995)
+Net cash used in financing activities | (18,031,995) | (18,031,995)
+Net (decrease) / increase in cash and cash equivalents | (15,238,759) | 48,381,245
+Cash and cash equivalents at the beginning of the year | 140,167,983 | 91,786,738
+Cash and cash equivalents at the end of the year | 124,929,224 | 140,167,983

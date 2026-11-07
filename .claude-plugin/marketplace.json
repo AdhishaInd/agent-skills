@@ -1,0 +1,16 @@
+{
+  "$schema": "https://code.claude.com/schemas/marketplace.json",
+  "name": "agent-skills",
+  "description": "Agent skills by AdhishaInd.",
+  "owner": { "name": "AdhishaInd", "url": "https://github.com/AdhishaInd" },
+  "plugins": [
+    {
+      "name": "financial-statements",
+      "source": "./",
+      "description": "Extract checked income statement, balance sheet and cash flow figures from company report PDFs into a database; includes a Colombo Stock Exchange (CSE) layer.",
+      "version": "1.0.0",
+      "license": "MIT",
+      "keywords": ["finance", "financial-statements", "pdf", "extraction", "cse"]
+    }
+  ]
+}
