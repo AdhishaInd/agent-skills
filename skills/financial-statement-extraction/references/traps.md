@@ -26,6 +26,12 @@ Learned on Colombo Stock Exchange filings; exchange API quirks are in the compan
   the parser (`fit_interim_periods`) repairs a column only when that slot is free and its date is the report's period
   end, a year before, or the last year end - otherwise it drops it. Year-end changes go in the reviewed
   `FYE_CHANGED` list. The audit counts misfits (`period_misfits`).
+- Quarter and year-to-date columns that both claim one period (header marks shifted): revenue only accumulates, so
+  the larger revenue is the year to date (`split_quarter_ytd`, only on the report's own period end and a year
+  before). Two columns printing identical figures (Q1 'quarter' and 'period') are one period, not a conflict.
+- Misprinted scope headings ('Company Group Company Company'), audited year-end columns printed LEFT of the labels,
+  and an audited 'Year ended' column dated with the report's period end are common header traps: read by content
+  (biological assets and NCI mean group; investment in subsidiaries means company).
 
 ## 2. Units and currency
 - Units are printed in a header, a page note ("all amounts in Sri Lanka Rupees '000"), or only in the column header
@@ -40,6 +46,8 @@ Learned on Colombo Stock Exchange filings; exchange API quirks are in the compan
   that column, or a proven column in the same table (one printed unit). Reports can agree on a wrong scale, so the
   proof nearest the company's level wins; a report confirming the stated unit keeps it. Unproven: refused, logged as
   `UNIT_SANITY`. Check per statement, never per period: a correct cash flow beside a wrong P&L hid REEF's error.
+- No unit printed and no other report covers the current column: a table has one printed unit, so a scale proven
+  for another column of the same table proves it (RHTL, LIOC, LLUB).
 - USD convenience translations (banks, LION, MGT) are stored with currency USD - compare like with like.
 - Total-assets outliers (x300 off the company's median) were the only scale guard once and missed P&L and cash flow
   errors; the audit now also reports column scale outliers and 10x conflicts between reports.
@@ -87,3 +95,15 @@ Learned on Colombo Stock Exchange filings; exchange API quirks are in the compan
   stop exact alias mapping. Match end lines loosely and keep % tokens out of labels.
 - Use an analysis as a test: reading one company's numbers end to end (quarter sums, a 1000x quarter, a cash flow
   that cannot be a year) found defects that ~2,700 reports of arithmetic checks had passed.
+
+- **A page missing from the filed PDF may have been filed later as an erratum.** Before recording "no cash flow page",
+  check the company's announcements (CSE: category "ERRATA TO THE FINANCIAL STATEMENT"). Keep the erratum PDF outside
+  the folder the parser scans, and cite it in the transcription.
+- **Label aliases live in the database.** The loader reads the `label_alias` table; an alias added only to the
+  reviewed file takes effect on a fresh seed, not on a restage. Never alias a label that companies print beside
+  another line of the same item (e.g. "net profit before tax" beside "profit before tax"): both lines then drop.
+- **A failing check is not always a misprint to give up on.** Look for the layout first (an exchange or overdraft
+  line between opening and closing cash), then for a sign printed under a label's own convention ("Increase/
+  (Reduction)" with a reduction in brackets is an inflow); prove it from balance-sheet movements and the company's
+  other filings. Spreadsheet rounding (cents kept, whole units printed) that is consistent across a company's
+  reports can be accepted per table with `ACCEPT <col> <max diff> | <reason>` - never by widening the tolerance.

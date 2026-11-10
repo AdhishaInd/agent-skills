@@ -74,7 +74,7 @@ def interpret_columns(rows, ctx, title):
     label_signs = []  # period words in the label area, e.g. 'For the period ended 31 December'
     left = cols[0]["x"] - 75
     single_date = re.compile(r"^\(?\d{1,2}[./-](?:\d{1,2}|[A-Za-z]{3})[./-]\d{2,4}\)?$")
-    year_re = re.compile(r"\(?(20\d\d)\)?(?:\s*/\s*(\d{2,4}))?")
+    year_re = re.compile(r"\(?(20\d\d)\)?(?:\s*[/-]\s*(\d{2,4}))?")   # '2024/25' or '2025-26
     unit_words = re.compile(r"(?i)\(?\b(?:rs|lkr|usd)\b\.?\)?|'?\s*000'?s?\b|\(?\b(?:un\s*-?\s*)?audited\b\)?|\(?\brestated\b\)?")
     month_only_headers = []
     range_starts = {}
@@ -330,6 +330,13 @@ def interpret_columns(rows, ctx, title):
         if c["note"] and c["date"] is not None:
             # a 'Note' heading just left of a dated column: the note numbers have no column of their own
             c["note"] = False
+    data_cols = [c for c in cols if not (c["change"] or c["note"])]
+    if len(data_cols) == 1 and data_cols[0]["date"] is None:
+        # one figures column and no date over it (a fund's single-period statement): the date in the title, e.g.
+        # 'FOR THE QUARTER ENDED 30TH JUNE 2025'
+        d = parse_date(head_text) or parse_date(title)
+        if d:
+            data_cols[0]["date"] = d
     _fill_months(cols, title, label_signs, head, fye, issues)
     # An explicitly printed consecutive financial-year range establishes a full
     # year only when no shorter period was stated elsewhere in the header.
@@ -363,10 +370,30 @@ def _cum_months(date, fye):
     if not date or not fye:
         return None
     d = dt.date.fromisoformat(date)
-    if d.day < 28:
+    if d.day < 24:   # companies closing on the 25th (UCAR) still report whole months
         return None
     n = (d.month - fye - 1) % 12 + 1
     return n if n in (3, 6, 9, 12) else None
+
+
+def default_cf_months(cols, stmt, ctx, issues):
+    """Cash flow headers often print only dates. Interim cash flows are year to date (LKAS 34 requires cumulative
+    cash flows), and an annual report's are the year, so a dated column with no length takes the year-to-date length
+    of its date (12 for a year end) - unless another column of its scope and date already holds that length."""
+    if stmt != "CF" or not ctx.get("fye") or ctx.get("category") not in ("INTERIM", "ANNUAL"):
+        return
+    if ctx.get("category") == "ANNUAL" and any(c.get("date") and _cum_months(c["date"], ctx["fye"]) != 12 for c in cols):
+        return   # a table in an annual report with a non-year-end date is a note, not the year's cash flow
+    for c in cols:
+        if c.get("months") or not c.get("date") or c.get("change") or c.get("note"):
+            continue
+        m = _cum_months(c["date"], ctx["fye"])
+        if ctx.get("category") == "ANNUAL" and m != 12:
+            continue
+        if not m or any(o is not c and o["scope"] == c["scope"] and o["date"] == c["date"] and o.get("months") == m for o in cols):
+            continue
+        c["months"] = m
+        issues.append(f"{c['scope']} {c['date']}: cash flow column with no printed length read as {m} months (year to date)")
 
 
 def fit_interim_periods(cols, stmt, ctx, issues):

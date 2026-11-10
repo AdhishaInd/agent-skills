@@ -118,6 +118,9 @@ def parse_date(text, default_year=None):
     m = re.search(rf"\b({MON})\b\.?\s*(\d{{1,2}})\s*[,.]?\s*(\d{{4}})\b", t, re.I)
     if m:
         return _iso(int(m.group(3)), MONTHS[m.group(1).lower()], int(m.group(2)))
+    m = re.search(rf"\b(20\d\d)\s+({MON})\b\.?\s*(\d{{1,2}})\b", t, re.I)   # '2025 Dec 31'
+    if m:
+        return _iso(int(m.group(1)), MONTHS[m.group(2).lower()], int(m.group(3)))
     # 'March 2024', 'Mar-24' or "Mar'24"; a two-digit year needs a mark, so 'March 31' stays a day
     m = re.search(rf"\b({MON})\b\s*(?:[-.,/' ]+\s*(\d{{4}})|\s*[-./']\s*(\d{{2}}))\b", t, re.I)
     if m:

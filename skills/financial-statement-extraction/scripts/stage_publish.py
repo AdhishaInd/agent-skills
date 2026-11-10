@@ -41,8 +41,8 @@ def run(cmd, log):
 
 
 def facts(s, db):
-    return {r[:5]: r[5] for r in s.execute(f"""select f.document_id, rl.normalized_label, pp.end_date, pp.months,
-            f.entity_scope, f.value from {db}.financial_fact f join {db}.reported_label rl using(label_id)
+    return {r[:5]: r[5] for r in s.execute(f"""select f.document_id, rl.statement_type_id || ':' || rl.normalized_label,
+            pp.end_date, pp.months, f.entity_scope, f.value from {db}.financial_fact f join {db}.reported_label rl using(label_id)
             join {db}.reporting_period pp using(period_id)""")}
 
 
@@ -114,7 +114,7 @@ def conflicts(s, db):
     out = set()
     for a, b in s.execute(f"""select x.document_id, y.document_id from {db}.financial_fact x
             join {db}.reported_label rx on rx.label_id=x.label_id join {db}.financial_fact y
-            on y.company_id=x.company_id and y.period_id=x.period_id and y.entity_scope=x.entity_scope and y.document_id>x.document_id
+            on y.company_id=x.company_id and y.period_id=x.period_id and y.entity_scope=x.entity_scope and y.currency=x.currency and y.document_id>x.document_id
             join {db}.reported_label ry on ry.label_id=y.label_id and ry.line_item_id=rx.line_item_id
             join {db}.line_item li on li.line_item_id=rx.line_item_id
             where li.value_kind='MONEY' and abs(x.value)>=1000 and abs(y.value)>=1000

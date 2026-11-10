@@ -15,6 +15,10 @@ Source files: reviewed/vision/<document_id>.txt, one or more blocks:
 COLS fields per column: scope, period end, months (0 on a balance sheet), audit, unit (1, 1000, 1000000), currency.
 A line may continue onto later pages: 'PAGE 26' sets the page for the lines after it.
 'MISSING <stmt> | <reason>' records that the report has no usable statement of that kind and why (no table is written).
+'ACCEPT <column number> <max difference> | <reason>' after a table's lines lets that column's failed checks pass
+when each misses by at most <max difference> (in printed units) - only for a print proven right by other evidence
+(e.g. ATLL: cents kept in the spreadsheet, whole rupees printed, totals off by a few rupees). The reason is kept with
+the check and printed in the vision log.
 'UNITS <unit> <currency>' outside a table gives the unit printed on the pages for parsed tables whose figures pass
 but whose unit the parser could not read (e.g. 'all amounts in Sri Lanka Rupees 000's' on a scan).
 The rows are given section codes the same way columns.read_rows does, so labels map through the same aliases.
@@ -98,6 +102,10 @@ def parse_file(path):
             head, _, why = line.partition("|")
             missing[head.split()[1]] = why.strip()
             cur = None
+        elif line.startswith("ACCEPT "):
+            head, _, why = line.partition("|")
+            _, col, most = head.split()
+            cur.setdefault("accept", []).append((int(col) - 1, float(most), why.strip()))
         elif line.startswith("UNITS "):
             _, u, ccy = line.split()
             units = (int(u), ccy)
@@ -123,6 +131,12 @@ def parse_file(path):
         table = dict(stmt=t["stmt"], title=t["title"], page=t["page"], issues=[], rows=rows, columns=t["cols"],
                      extractor="vision")
         table["checks"] = check_table(t["stmt"], rows, len(t["cols"]))
+        for j, most, why in t.get("accept", []):
+            for c in table["checks"]:
+                if c[1] == j and not c[4] and abs(c[2] - c[3]) <= most:
+                    c[4] = True
+                    c.append("accepted: " + why)
+            table["accepted"] = table.get("accepted", []) + [f"col{j + 1}: {why}"]
         out.append(table)
     return out, units, missing
 
@@ -153,6 +167,8 @@ def main(in_dir, extracted, out_dir):
         for t in vt:
             st = column_status(t)
             fails = [c for c in t["checks"] if not c[4]]
+            if t.get("accepted"):
+                print(doc, t["stmt"], f"p{t['page']}", "ACCEPTED:", "; ".join(t["accepted"]))
             print(doc, t["stmt"], f"p{t['page']}", [st.get(j) for j in range(len(t["columns"]))],
                   "FAILED: " + "; ".join(f"{c[0]} col{c[1]} {c[2]} vs {c[3]}" for c in fails) if fails else "")
 

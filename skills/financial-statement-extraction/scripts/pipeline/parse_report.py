@@ -18,7 +18,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
 import normalize  # noqa: E402
 from checks import check_table, find  # noqa: E402
-from columns import interpret_columns, read_rows, fit_interim_periods  # noqa: E402
+from columns import interpret_columns, read_rows, fit_interim_periods, default_cf_months  # noqa: E402
 import ocr_words  # noqa: E402
 from segment import statement_tables  # noqa: E402
 
@@ -111,6 +111,40 @@ def trim_rows(stmt, rows):
     return rows
 
 
+_REVENUE = re.compile(r"(?i)^(total )?(revenue|turnover|sales|gross income|net revenue|income)\b")
+
+
+def split_quarter_ytd(stmt, cols, rows, ctx, issues):
+    """Two columns of an interim P&L claiming one scope, date and length, where the other of quarter / year to date is
+    free: the header marks were mis-assigned. Revenue only accumulates, so the larger revenue is the year to date."""
+    if ctx.get("category") != "INTERIM" or stmt != "IS" or not ctx.get("fye"):
+        return
+    from columns import _cum_months
+    groups = {}
+    for i, c in enumerate(cols):
+        groups.setdefault((c["scope"], c["date"], c["months"]), []).append(i)
+    rev = next((r for r in rows if _REVENUE.match(r["label"] or "")), None)
+    pe = ctx.get("period_end")
+    if rev is None or not pe:
+        return
+    own = {pe, f"{int(pe[:4]) - 1}{pe[4:]}"}   # the report's own period ends; a misread date is not split
+    for (scope, date, m), idx in groups.items():
+        if len(idx) != 2 or date not in own:
+            continue
+        cum = _cum_months(date, ctx["fye"])
+        if not cum or cum == 3 or m not in (3, cum):
+            continue
+        other = cum if m == 3 else 3
+        if (scope, date, other) in groups:
+            continue
+        a, b = (rev["values"].get(str(i), rev["values"].get(i)) for i in idx)
+        if not a or not b or a <= 0 or b <= 0 or abs(a - b) < 1e-9:
+            continue
+        big, small = (idx[0], idx[1]) if a > b else (idx[1], idx[0])
+        cols[big]["months"], cols[small]["months"] = cum, 3
+        issues.append(f"{scope} {date}: two columns read as {m} months; larger revenue taken as {cum} months (year to date)")
+
+
 def read_tables(doc, ctx):
     """Parse statements from a document, or from an OcrDoc wrapping one. Tables say which pages they came from."""
     tables = []
@@ -124,6 +158,7 @@ def read_tables(doc, ctx):
         spec, issues = interpret_columns(rows_first, ctx, seg["title"])
         table = dict(stmt=seg["stmt"], title=seg["title"][:120], page=seg["pages"][0][0] + 1, issues=issues, rows=[], columns=[], checks=[], extractor=extractor)
         if spec and spec["cols"]:
+            default_cf_months(spec["cols"], seg["stmt"], ctx, issues)
             spec["cols"] = fit_interim_periods(spec["cols"], seg["stmt"], ctx, issues)
         if spec and spec["cols"]:
             rows = []
@@ -154,6 +189,7 @@ def read_tables(doc, ctx):
                         if c.get("unit") == 1 and c.get("currency", "LKR") == note[1]:
                             c["unit_known"] = False
             table["rows"] = trim_rows(seg["stmt"], rows)
+            split_quarter_ytd(seg["stmt"], spec["cols"], table["rows"], ctx, issues)
             if len(table["rows"]) < len(rows):
                 table["rows_trimmed"] = len(rows) - len(table["rows"])
             table["columns"] = [{k: c[k] for k in ("scope", "date", "months", "audit", "unit", "unit_known", "currency")} | ({"unit_source": c["unit_source"]} if "unit_source" in c else {}) | ({"period_refit": True} if c.get("period_refit") else {}) for c in spec["cols"]]

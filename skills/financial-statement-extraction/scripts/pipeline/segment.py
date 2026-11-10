@@ -14,7 +14,7 @@ from tokens import *  # noqa: F401,F403,E402
 from tokens import MON, MONTHS  # noqa: E402
 
 HEADINGS = [
-    ("CF", re.compile(r"statement\s+of\s+cash\s*flows?|cash\s*flows?\s+statements?|cash\s*flow\s+information$", re.I)),
+    ("CF", re.compile(r"statements?\s+of\s+(?:changes\s+in\s+)?cash\s*flows?|cash\s*flows?\s+statements?|cash\s*flow\s+information$", re.I)),
     ("SOCE", re.compile(r"statements?\s+of\s+changes?\s+in|changes?\s+in\s+equity\s+statement|statement\s+of\s+equity", re.I)),
     ("BS", re.compile(r"statements?\s+of\s+financial\s+position|balance\s+sheet", re.I)),
     ("IS", re.compile(r"income\s+statements?|statements?\s+of\s+(?:profit|comprehensive\s+income|income)|profit\s+(?:or|and|&)\s+loss(?:\s+account|\s+statement)?|comprehensive\s+income\s+statement", re.I)),
@@ -303,6 +303,16 @@ def _balance_sheet_continuation(current, pno, rows):
             and any(end.search(t) for t in after))
 
 
+def _table_rows(rows):
+    """Rows of a figures table: rows with two or more numbers, or - for a single-column statement (a fund's or a
+    first-period report's) - at least 8 rows with one sizeable figure (thousands separator), counted as half."""
+    multi = sum(1 for r in rows if sum(is_num(w[4]) for w in r) >= 2)
+    if multi >= 4:
+        return multi
+    single = sum(1 for r in rows if any(is_num(w[4]) and re.search(r"\d,\d{3}", w[4]) for w in r))
+    return single // 2 if single >= 8 else multi
+
+
 def statement_tables(doc, ctx):
     """Yield statement segments: consecutive rows under one heading, continuing over pages when marked."""
     segments, current = [], None
@@ -321,7 +331,7 @@ def statement_tables(doc, ctx):
             current = None
             continue
         primary_units.append((pno, rows))
-        numeric_rows = sum(1 for r in rows if sum(is_num(w[4]) for w in r) >= 2)
+        numeric_rows = _table_rows(rows)
         marks = []
         for i, r in enumerate(rows):
             t = text_of(r)
@@ -373,7 +383,7 @@ def statement_tables(doc, ctx):
             if k + 1 < len(marks) and marks[k + 1][1] == h and marks[k + 1][0] - i <= 3:
                 continue    # repeated heading line
             body = rows[i:end]
-            if sum(1 for r in body if sum(is_num(w[4]) for w in r) >= 2) < 4:
+            if _table_rows(body) < 4:
                 continue
             contd = bool(re.search(r"cont[.'’d]|continued", t, re.I))
             if current is not None and current["stmt"] == h and (contd or h == "BS" and _balance_sheet_continuation(current, pno, body)):

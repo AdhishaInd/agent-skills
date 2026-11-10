@@ -217,6 +217,23 @@ CREATE TABLE financial_fact (
 CREATE INDEX ix_fact_label  ON financial_fact(label_id);
 CREATE INDEX ix_fact_period ON financial_fact(period_id);
 CREATE INDEX ix_fact_company_scope_period ON financial_fact(company_id, entity_scope, period_id);
+-- A statement column that passed its checks only within a few printed units (ROUNDING), or only because a reviewed
+-- note accepted a proven print (ACCEPTED, reviewed/vision ACCEPT lines). Join to financial_fact on document_id,
+-- period_id, entity_scope and the label's statement type. max_difference is in rupees (printed units x unit scale).
+CREATE TABLE IF NOT EXISTS statement_check_flag (
+    company_id       INTEGER NOT NULL,
+    document_id      INTEGER NOT NULL,
+    period_id        INTEGER NOT NULL,
+    entity_scope     TEXT NOT NULL CHECK (entity_scope IN ('GROUP','COMPANY')),
+    statement        TEXT NOT NULL CHECK (statement IN ('IS','OCI','BS','CF')),
+    flag             TEXT NOT NULL CHECK (flag IN ('ROUNDING','ACCEPTED')),
+    max_difference   NUMERIC NOT NULL,
+    checks           TEXT NOT NULL,     -- the checks that missed, e.g. 'assets=liabilities+equity 2; ...'
+    reason           TEXT,              -- the reviewed reason (ACCEPTED)
+    PRIMARY KEY (document_id, period_id, entity_scope, statement, flag),
+    FOREIGN KEY (company_id, document_id) REFERENCES report_document(company_id, document_id),
+    FOREIGN KEY (company_id, period_id)   REFERENCES reporting_period(company_id, period_id)
+);
 
 -- Statement of changes in equity is a matrix: movement rows by reserve columns.
 CREATE TABLE equity_movement_fact (

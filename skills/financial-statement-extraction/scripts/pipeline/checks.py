@@ -75,14 +75,18 @@ HELD_FOR_SALE = re.compile(r"held for (?:sale|distribution)|disposal group")
 # A bank's perpetual bond shown as its own block between total liabilities and equity (HDFC).
 DEBT_CAPITAL = re.compile(r"^(?:debt capital|perpetual (?:bonds?|debentures?))$")
 
-_CASHLINE = r"^(?:net )?(?:cash ?flows?|cash|funds)\b.*\b"
+_CASHLINE = r"^(?:(?:net )?(?:cash ?flows?|cash|funds)|net flows? from|net (?:used in |generated |\(used in\) )+(?:from|in))\b.*\b"   # incl. 'Net Flow from ...', 'Net Generated from ...'
 CF_OP = re.compile(_CASHLINE + r"(?:operating activities|operations?|operating)\b")
 CF_INV = re.compile(_CASHLINE + r"(?:investing|investment activities)\b")
-CF_FIN = re.compile(_CASHLINE + r"(?:financing|finance activities)\b")
+CF_FIN = re.compile(_CASHLINE + r"(?:in)?(?:financing|finance activities)\b")   # 'used infinancing' (missing space)
 CF_NET = re.compile(r"^(?:net |total )?(?:net )?(?:increase|decre?ase|changes?|movements?)\b.*\b(?:cash|period|year)\b|^net (?:cash ?flows?|cash|funds)\b.*\b(?:inflow|outflow|increase|decrease|period|year)\b|^net (?:inflow|outflow)")
-CF_FX = re.compile(r"(?:effect|impact|gain|loss|difference|adjustment|movement|change|fluctuation)s?\b.*\b(?:exchange|currency|translation)|^(?:net )?(?:foreign )?(?:exchange|currency|translation)\b")
+CF_FX = re.compile(r"(?:effect|impact|gain|loss|difference|adjustment|movement|change|fluctuation)s?\b.*\b(?:exchange|currency|translation)|^(?:net )?(?:foreign )?(?:exchange|currency|translation)\b|^(?:un)?reali[sz]ed (?:foreign )?exchange\b")   # 'Unrealised exchange loss/(gain) on cash' (CHMX)
+CF_OD = re.compile(r"^(?:less )?(?:bank )?over ?drafts?\b|^bank overdrafts?\b")   # an overdraft line bridging opening and closing cash (BLUE)
+CF_NET_TAIL = re.compile(r"^(?:cash )?equivalents during the (?:period|year)$")   # tail of a wrapped net-change label
 CF_OPEN = re.compile(r"(?:cash|cash ?flows?|bank)\b.*\b(?:beginning|start|commencement|opening)\b|^opening\b.*\b(?:cash|balance)\b|^balance at (?:the )?(?:beginning|start)")
+CF_OPEN_BARE = re.compile(r"^at (?:the )?(?:beginning|start) of (?:the )?(?:period|year)")
 CF_CLOSE = re.compile(r"(?:cash|bank)\b.*\b(?:end|close|closing)\b|^closing\b.*\b(?:cash|balance)\b|^balance at (?:the )?(?:end|close)")
+CF_CLOSE_BARE = re.compile(r"^at (?:the )?(?:end|close) of (?:the )?(?:period|year)")
 CF_TAIL = 8  # rows after the financing total that can still belong to the statement if no closing line was read
 CF_OUT = re.compile(r"\b(?:used|outflow)\b")
 CF_IN = re.compile(r"\b(?:from|generated|inflow|provided)\b")
@@ -138,7 +142,7 @@ def _at(rows, rx, start=0, end=None, skip=None):
     return None
 
 
-CONTINUATION = re.compile(r"^(?:activities|(?:operating|investing|financing) activities|operations|equivalents|cash equivalents|equity and liabilities|liabilities|tax|taxation|income tax|(?:the )?(?:period|year))$")
+CONTINUATION = re.compile(r"^(?:activities|(?:operating|investing|financing) activities|operations|equivalents|cash equivalents|(?:cash )?equivalents during the (?:period|year)|equity and liabilities|liabilities|tax|taxation|income tax|(?:the )?(?:period|year))$")
 
 
 def _prepare(rows):
@@ -397,33 +401,81 @@ def _section(row, j):
 
 
 def _cash_flow(rows, n):
+    """Sections (at least two of operating, investing, financing; small companies often have no investing or no
+    financing activities) must add up to the net change in cash, or, when no net change line is printed, to
+    closing minus opening cash. Opening + net change = closing is checked too."""
     res = []
     before = re.compile(r"\bbefore\b")
-    inv = _at(rows, CF_INV, skip=before)
-    if inv is None:
-        return res
-    fin = _at(rows, CF_FIN, inv + 1, skip=before)
-    # The operating total is the last such line before investing: 'cash generated from operations' comes first.
-    ops = [i for i in range(inv) if rows[i]["values"] and CF_OP.search(rows[i]["norm"])]
-    if not ops or fin is None:
+    first_inv = _at(rows, CF_INV, skip=before)
+    first_fin = _at(rows, CF_FIN, (first_inv + 1) if first_inv is not None else 0, skip=before)
+    nxt = first_inv if first_inv is not None else first_fin
+    if nxt is None:
+        # only an operating section (a fund with no investing or financing flows): its total must equal the net
+        # change, and opening + net change must equal closing - two independent printed figures
+        ops1 = [i for i in range(len(rows)) if rows[i]["values"] and CF_OP.search(rows[i]["norm"])]
+        if not ops1:
+            return res
+        nxt = ops1[-1] + 1
+        single = True
+    else:
+        single = False
+    # The operating total is the last such line before the next section: 'cash generated from operations' comes first.
+    ops = [i for i in range(nxt) if rows[i]["values"] and CF_OP.search(rows[i]["norm"])]
+    if not ops:
         return res
     net_ops = [i for i in ops if rows[i]["norm"].startswith("net ")]
     op = (net_ops or ops)[-1]
     # An unlabelled total after tax and interest paid is the section's real total, e.g. CDB and SUN print it that way.
-    blanks = [i for i in range(op + 1, inv) if rows[i]["values"] and not rows[i]["norm"]]
+    blanks = [i for i in range(op + 1, nxt) if rows[i]["values"] and not rows[i]["norm"]]
     op_alt = blanks[-1] if blanks else None
-    # The investing and financing totals are the last matching lines of their sections.
-    later = [i for i in range(inv, fin) if rows[i]["values"] and CF_INV.search(rows[i]["norm"]) and not before.search(rows[i]["norm"])]
-    inv = later[-1]
-    net = _at(rows, CF_NET, fin + 1)
-    opening = _at(rows, CF_OPEN, fin + 1)
-    closing = _at(rows, CF_CLOSE, (opening if opening is not None else fin) + 1)
-    window = closing if closing is not None else min(fin + CF_TAIL, len(rows))
-    fx = [i for i in range(fin + 1, window) if rows[i]["values"] and CF_FX.search(rows[i]["norm"]) and i != net]
-    disc = [i for i in range(fin + 1, net if net is not None else fin + 1) if rows[i]["values"] and DISCONTINUED.search(rows[i]["norm"])]
+    totals, nil_idx = [op], set()
+    if first_inv is None or first_fin is None:
+        # a section total printed with dashes in every column ('Net cash generated from financing activities  -')
+        for rx, have in ((CF_INV, first_inv), (CF_FIN, first_fin)):
+            if have is None:
+                k = next((i for i in range(op + 1, len(rows)) if not rows[i]["values"] and rows[i]["norm"].startswith("net ")
+                          and rx.search(rows[i]["norm"])), None)
+                if k is not None:
+                    nil_idx.add(k)
+    if first_inv is not None:
+        # The investing total is the last matching line of its section.
+        stop = first_fin if first_fin is not None else len(rows)
+        later = [i for i in range(first_inv, stop) if rows[i]["values"] and CF_INV.search(rows[i]["norm"]) and not before.search(rows[i]["norm"])]
+        if not later:
+            return res
+        totals.append(later[-1])
+    if first_fin is not None:
+        totals.append(first_fin)
+    totals = sorted(set(totals) | nil_idx)
+    last = totals[-1]
+    # No financing total, but lines between the investing total and the net change / opening cash (SWAD, CHMX 49992
+    # print the financing items without a total; the heading has no figures so it is not in rows): those lines are
+    # offered as the financing section, as an alternative sum only - still held to the net change or closing - opening.
+    fin_items = []
+    if first_fin is None and first_inv is not None and not any(CF_FIN.search(rows[k]["norm"]) for k in nil_idx):
+        for i in range(last + 1, len(rows)):
+            nm = rows[i]["norm"]
+            if CF_NET.search(nm) or CF_OPEN.search(nm) or CF_CLOSE.search(nm) or CF_FX.search(nm) or CF_NET_TAIL.search(nm):
+                break
+            if rows[i]["values"]:
+                fin_items.append(i)
+    net = _at(rows, CF_NET, last + 1)
+    opening = _at(rows, CF_OPEN, last + 1)
+    closing = _at(rows, CF_CLOSE, (opening if opening is not None else last) + 1)
+    if len(totals) + bool(fin_items) < 2 and not (single and None not in (net, opening, closing)):
+        return res
+    window = closing if closing is not None else min(last + CF_TAIL, len(rows))
+    fx = [i for i in range(last + 1, window) if rows[i]["values"] and CF_FX.search(rows[i]["norm"]) and i != net]
+    # an overdraft line printed between opening and closing cash bridges the two, like an exchange line
+    if opening is not None and closing is not None:
+        fx += [i for i in range(opening + 1, closing) if rows[i]["values"] and CF_OD.search(rows[i]["norm"]) and i not in fx]
+    disc = [i for i in range(last + 1, net if net is not None else last + 1) if rows[i]["values"] and DISCONTINUED.search(rows[i]["norm"])]
     for j in range(n):
-        sections = [_section(rows[k], j) for k in (op, inv, fin)]
+        # a section total printed as a dash in this column (it has figures in others) is nil
+        sections = [(0.0, 0.0) if k in nil_idx or _v(rows[k], j) is None else _section(rows[k], j) for k in totals]
         nv = _v(rows[net], j) if net is not None else None
+        ov = _v(rows[opening], j) if opening is not None else None
+        cv = _v(rows[closing], j) if closing is not None else None
         if op_alt is not None and _v(rows[op_alt], j) is not None and sections[0][0] is not None:
             # Only a line that totals the operating line and the lines under it; a blank-labelled line further
             # down is an investing item whose name was lost.
@@ -431,17 +483,19 @@ def _cash_flow(rows, n):
             if abs(sum(parts) - _v(rows[op_alt], j)) <= _tolerance(parts + [_v(rows[op_alt], j)]) + 1e-9:
                 sections[0] = (_v(rows[op_alt], j),) * 2
         fxs = [_nil(rows[k], j) for k in fx]
-        if nv is not None and all(x[0] is not None for x in sections):
+        change = nv if nv is not None else (cv - ov) if (ov is not None and cv is not None) else None
+        if change is not None and all(x[0] is not None for x in sections):
             extra = sum(_nil(rows[k], j) for k in disc)
+            fin = sum(_nil(rows[k], j) for k in fin_items)
             lefts = []
             for base in (sum(x[0] for x in sections) + extra, sum(x[1] for x in sections) + extra):
-                lefts += [base] + [base + m * sum(fxs) for m in (1, -1)] * bool(fxs)
-            _add(res, CF_CORE, j, lefts, nv, [x[0] for x in sections] + [nv] + fxs)
-        if nv is not None and opening is not None and closing is not None:
-            ov, cv = _v(rows[opening], j), _v(rows[closing], j)
-            if ov is not None and cv is not None:
-                lefts = [ov + nv] + [ov + nv + m * sum(fxs) for m in (1, -1)] * bool(fxs)
-                _add(res, CF_CASH, j, lefts, cv, [ov, nv, cv] + fxs)
+                for b in ([base, base + fin] if fin_items else [base]):
+                    lefts += [b] + [b + m * sum(fxs) for m in (1, -1)] * bool(fxs)
+            parts = [x[0] for x in sections] + [_nil(rows[k], j) for k in fin_items] + ([nv] if nv is not None else [ov, cv]) + fxs
+            _add(res, CF_CORE, j, lefts, change, parts)
+        if nv is not None and ov is not None and cv is not None:
+            lefts = [ov + nv] + [ov + nv + m * sum(fxs) for m in (1, -1)] * bool(fxs)
+            _add(res, CF_CASH, j, lefts, cv, [ov, nv, cv] + fxs)
     return res
 
 
